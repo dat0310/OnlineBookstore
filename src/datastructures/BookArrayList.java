@@ -11,7 +11,6 @@ public class BookArrayList {
         elements = new Book[DEFAULT_CAPACITY];
         size = 0;
     }
-
     public void add(Book book) {
         if (size == elements.length) {
             resize();

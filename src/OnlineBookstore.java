@@ -35,8 +35,15 @@ public class OnlineBookstore {
         boolean running = true;
         while (running) {
             displayMenu();
-            int choice = scanner.nextInt();
-            scanner.nextLine();
+            int choice;
+            try {
+                choice = scanner.nextInt();
+                scanner.nextLine();
+            } catch (Exception e) {
+                System.out.println("Invalid input! Please enter a number.");
+                scanner.nextLine();
+                continue;
+            }
 
             switch (choice) {
                 case 1: displayInventory(); break;
@@ -44,7 +51,9 @@ public class OnlineBookstore {
                 case 3: processOrders(); break;
                 case 4: trackOrder(); break;
                 case 5: viewAllOrders(); break;
-                case 6: running = false;
+                case 6: addNewBook(); break;
+                case 7: deleteBook(); break;
+                case 8: running = false;
                     System.out.println("Exiting Online Bookstore. Thank you!"); break;
                 default: System.out.println("Invalid choice! Please try again.");
             }
@@ -59,8 +68,10 @@ public class OnlineBookstore {
         System.out.println("3. Process Pending Orders");
         System.out.println("4. Track Order Status");
         System.out.println("5. View All Orders");
-        System.out.println("6. Exit System");
-        System.out.print("Enter your choice (1-6): ");
+        System.out.println("6. Add New Book");
+        System.out.println("7. Delete Book");
+        System.out.println("8. Exit System");
+        System.out.print("Enter your choice (1-8): ");
     }
 
     private void displayInventory() {
@@ -74,7 +85,7 @@ public class OnlineBookstore {
             System.out.println("1. Search by ID");
             System.out.println("2. Search by Title");
             System.out.println("3. Search by Author");
-            System.out.print("Choose search option (0-3): ");
+            System.out.print("Choose search option (0-3, 0 to exit): ");
 
             int choice;
             try {
@@ -135,8 +146,12 @@ public class OnlineBookstore {
 
     private void showAllBooks(Book[] books) {
         System.out.println("\n=== All Books ===");
-        for (Book book : books) {
-            System.out.println(formatBookDetails(book));
+        if (books.length == 0) {
+            System.out.println("Inventory is empty.");
+        } else {
+            for (Book book : books) {
+                System.out.println(formatBookDetails(book));
+            }
         }
     }
 
@@ -330,6 +345,129 @@ public class OnlineBookstore {
         }
 
         System.out.println("\nTotal: " + (processedCount + unprocessedCount) + " orders");
+    }
+
+    private void addNewBook() {
+        System.out.println("\n=== Add New Book ===");
+        String id;
+        while (true) {
+            System.out.print("Enter book ID (or '0' to cancel): ");
+            id =  id = scanner.nextLine();
+            if (id.equals("0")) {
+                System.out.println("Add book cancelled.");
+                return;
+            }
+            if (id.trim().isEmpty()) {
+                System.out.println("ID cannot be empty!");
+                continue;
+            }
+            if (findBookById(id) != null) {
+                System.out.println("A book with ID " + id + " already exists!");
+                continue;
+            }
+            break;
+        }
+
+        System.out.print("Enter book title: ");
+        String title = scanner.nextLine();
+        if (title.trim().isEmpty()) {
+            System.out.println("Title cannot be empty!");
+            return;
+        }
+
+        System.out.print("Enter author name: ");
+        String author = scanner.nextLine();
+        if (author.trim().isEmpty()) {
+            System.out.println("Author cannot be empty!");
+            return;
+        }
+
+        double price = -1;
+        while (price < 0) {
+            System.out.print("Enter price: ");
+            try {
+                price = scanner.nextDouble();
+                if (price < 0) {
+                    System.out.println("Price cannot be negative!");
+                }
+            } catch (Exception e) {
+                System.out.println("Please enter a valid number!");
+                scanner.nextLine();
+            }
+        }
+        scanner.nextLine();
+
+        int quantity = -1;
+        while (quantity < 0) {
+            System.out.print("Enter quantity: ");
+            try {
+                quantity = scanner.nextInt();
+                if (quantity < 0) {
+                    System.out.println("Quantity cannot be negative!");
+                }
+            } catch (Exception e) {
+                System.out.println("Please enter a valid number!");
+                scanner.nextLine();
+            }
+        }
+        scanner.nextLine();
+
+        Book newBook = new Book(id, title, author, price, quantity);
+        inventory.add(newBook);
+        System.out.println("Book added successfully: " + formatBookDetails(newBook));
+    }
+
+    private void deleteBook() {
+        System.out.println("\n=== Delete Book ===");
+        Book[] books = inventory.toArray();
+        SortingAlgorithms.mergeSort(books);
+        showAllBooks(books);
+
+        System.out.print("Enter book ID to delete (or '0' to cancel): ");
+        String id = scanner.nextLine();
+
+        if (id.equals("0")) {
+            System.out.println("Delete book cancelled.");
+            return;
+        }
+
+        Book book = findBookById(id);
+        if (book == null) {
+            System.out.println("Book with ID " + id + " not found.");
+            return;
+        }
+
+        // Check if book is part of any unprocessed orders
+        boolean inOrder = false;
+        OrderQueue tempQueue = new OrderQueue();
+        while (!unprocessedOrders.isEmpty()) {
+            Order order = unprocessedOrders.dequeue();
+            tempQueue.enqueue(order);
+            for (Book b : order.getBooks()) {
+                if (b.getId().equals(id)) {
+                    inOrder = true;
+                    break;
+                }
+            }
+        }
+        while (!tempQueue.isEmpty()) {
+            unprocessedOrders.enqueue(tempQueue.dequeue());
+        }
+
+        if (inOrder) {
+            System.out.println("Cannot delete book: It is part of an unprocessed order.");
+            return;
+        }
+
+        // Since BookArrayList doesn't have a remove method, we create a new array without the book
+        BookArrayList newInventory = new BookArrayList();
+        for (Book b : inventory.toArray()) {
+            if (!b.getId().equals(id)) {
+                newInventory.add(b);
+            }
+        }
+        inventory = newInventory;
+        System.out.println("Book deleted successfully: " + formatBookDetails(book));
     }
 
     public static void main(String[] args) {
